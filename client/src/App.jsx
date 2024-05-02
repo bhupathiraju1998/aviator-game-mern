@@ -1,35 +1,48 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from "react";
+import CountUp from "react-countup";
+import "./App.css";
+import io from "socket.io-client";
+
+const socket = io.connect("http://localhost:3001");
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [list, setList] = useState([]);
+  const [number, setNumber] = useState(null);
+  const joinGame = async () => {
+    await socket.emit("join_room", "start");
+    await socket.emit("send_random_number");
+  };
+
+  useEffect(() => {
+    socket.off("recieve_random_number").on("recieve_random_number", (data) => {
+      setNumber(data);
+      setList((list) => [...list, data]);
+      console.log("frintend random number", data);
+    });
+  }, [socket]);
+
+  const startNewHandler = async (numberSent) => {
+    console.log("entered");
+    await socket.emit("send_random_number");
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div>
+      <div className="list-style">
+        {list.slice(-15).reverse().map((each, index) => (
+          <p key={index}>{`${each},`}</p>
+        ))}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      <button onClick={joinGame}>Start Game</button>
+      <CountUp
+        delay={0}
+        start={1}
+        end={number}
+        onEnd={(numberSent) => startNewHandler()}
+        decimals={2}
+      />
+    </div>
+  );
 }
 
-export default App
+export default App;
